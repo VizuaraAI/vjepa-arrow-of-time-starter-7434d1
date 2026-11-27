@@ -1,0 +1,44 @@
+# Default configuration for the V-JEPA arrow-of-time experiments.
+# Every run copies this file into its output folder so results stay reproducible.
+
+seed: 0
+device: auto            # auto | cuda | cpu
+
+stimuli:
+  sources_csv: data/sources.csv      # columns: clip_id,url,start_s,crop_x,crop_y,crop_size,group,reversible
+  cache_dir: data/raw                # downloaded mp4 files (never commit)
+  out_dir: data/stimuli              # built clips as .npy (never commit)
+  n_frames: 33                       # 4.4 s at 7.5 fps
+  fps: 7.5
+  size: 256
+  flip_frame: 16                     # FR / RF switch direction here
+
+model:
+  name: facebook/vjepa2-vitl-fpc64-256   # or facebook/vjepa2-vith-fpc64-256
+  dtype: float16                         # float32 on CPU
+
+surprise:
+  window: 16          # frames per window
+  seen: 8             # seen (context) frames inside a window
+  stride: 2           # sliding step in frames
+  versions: [FF, RR, FR, RF]
+  mirror: true        # also run the content-fixed mirror test on FF windows
+  out_csv: results/surprise.csv
+
+probe:
+  layer: last         # last | middle
+  n_splits: 5
+  C: 1.0
+  out_csv: results/probe.csv
+
+control:              # positive control: forecasting fine-tune of the predictor
+  direction: forward  # forward | reversed | mixed
+  lora_rank: 8        # 0 means full predictor fine-tune
+  lora_alpha: 16
+  epochs: 2
+  lr: 1.0e-4
+  batch_size: 4
+  train_dir: data/train_segments   # 33-frame .npy segments, never overlapping test clips
+  folds_csv: data/folds.csv         # columns: segment_id,half (split by source video)
+  half: 0             # train on half 0, evaluate on half 1 (cross-fitting)
+  out_dir: checkpoints/control
